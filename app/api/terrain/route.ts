@@ -1,0 +1,7 @@
+import { env } from 'cloudflare:workers';
+import { headers } from 'next/headers';
+export const dynamic='force-dynamic';
+async function authorized(){return Boolean((await headers()).get('oai-authenticated-user-id'))}
+function validMap(map:string){return ['awal','pelangi','danau'].includes(map)}
+export async function GET(req:Request){if(!await authorized())return Response.json({error:'Silakan masuk.'},{status:401});const map=new URL(req.url).searchParams.get('map')||'awal';if(!validMap(map))return Response.json({error:'Peta tidak valid.'},{status:400});const legacy=map==='awal'?await env.DB!.prepare('SELECT cell,blocked FROM terrain_overrides').all():{results:[]};const newer=await env.DB!.prepare('SELECT cell,blocked FROM map_terrain WHERE map = ?').bind(map).all();return Response.json({overrides:[...legacy.results,...newer.results]})}
+export async function POST(req:Request){if(!await authorized())return Response.json({error:'Silakan masuk.'},{status:401});const data=await req.json() as {cell:unknown,blocked:unknown,map:unknown};const map=String(data.map||'awal'),cell=Number(data.cell);if(!validMap(map)||!Number.isInteger(cell)||cell<0||cell>=48*32||typeof data.blocked!=='boolean')return Response.json({error:'Petak tidak valid.'},{status:400});await env.DB!.prepare('INSERT INTO map_terrain (map,cell,blocked) VALUES (?,?,?) ON CONFLICT(map,cell) DO UPDATE SET blocked=excluded.blocked').bind(map,cell,data.blocked?1:0).run();return Response.json({ok:true})}

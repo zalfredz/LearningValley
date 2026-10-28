@@ -1,0 +1,1 @@
+ALTER TABLE `focus_spot_positions` ADD `coordinate_anchor` text DEFAULT 'seat' NOT NULL;

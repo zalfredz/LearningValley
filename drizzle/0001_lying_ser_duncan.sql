@@ -1,0 +1,1 @@
+ALTER TABLE `visitors` ADD `room` text DEFAULT 'awal' NOT NULL;
